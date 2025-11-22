@@ -72,9 +72,10 @@ def build_docs(source_dir: str):
 
         docs.append({
             "id": create_id(path, source_dir),
-            # "url": TBD,
+            "url": "/",
             "content": content,
             "scope": scope,
+            "title": folders[-1]
         })
 
     return docs
