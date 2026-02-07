@@ -11,5 +11,5 @@ docker run -d -p 7700:7700 -e MEILI_MASTER_KEY=<master_key> getmeili/meilisearch
 ## Upload test data
 
 ```
-python .\upload_data.py
+python3 ./upload_data.py
 ```
