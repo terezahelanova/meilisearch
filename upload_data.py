@@ -130,7 +130,6 @@ def create_documents_per_file(content: str, scope: str, path: Path, source_dir: 
     page_key = response["key"]
 
     contents = merge_content_by_headings(structured_data["contents"])
-    print(contents)
     headings = structured_data["headings"]
 
     heading_counter = 0
