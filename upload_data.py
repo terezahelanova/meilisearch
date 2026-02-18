@@ -54,12 +54,17 @@ def process_args() -> str:
             print("Too many arguments.")
             sys.exit(1)            
 
-def create_id(path: Path, source_dir: str, anchor: str | None = None) -> str:
+def create_id(path: Path, source_dir: str, anchor: str | None = None, counter: int = 0) -> str:
     relativePath = path.relative_to(source_dir).as_posix()
     base = relativePath
     if anchor:
         base = f"{relativePath}-{anchor}"
-    return hashlib.sha1(base.encode("utf8")).hexdigest()
+    id_base = hashlib.sha1(base.encode("utf8")).hexdigest()
+    
+    if counter == 0:
+        return id_base
+    
+    return f"{id_base}-{counter}"
 
 def http_request(method, url, body=None):
     headers = {
@@ -83,44 +88,9 @@ def update_index_settings():
         f"{MEILI_HOST}/indexes/{INDEX_NAME}/settings",
         {
             "filterableAttributes": ["scope"],
-            "searchableAttributes": ["heading", "content", "pageTitle"]
+            "searchableAttributes": ["heading", "content"]
         } 
     )
-
-def merge_content_by_headings(contents):
-    merged_result = []
-    heading_groups = {}
-    no_heading_content = []
-    
-    for item in contents:
-        content = item.get('content', '')
-
-        if "heading" not in item:
-            if len(no_heading_content) > 0:
-                no_heading_content.append("\n")
-            no_heading_content.append(remove_html_elemets(content))
-            continue
-
-        heading = item.get('heading')
-        if heading not in heading_groups:
-            heading_groups[heading] = []
-        else:
-            heading_groups[heading].append("\n")
-        heading_groups[heading].append(remove_html_elemets(content))
-
-    if no_heading_content:
-        merged_result.append({
-            'heading': None,  
-            'content': "".join(no_heading_content)
-        })
-    
-    for heading, contents in heading_groups.items():
-        merged_result.append({
-            'heading': heading,  
-            'content': "".join(contents)  
-        })
-    
-    return merged_result
 
 def create_documents_per_file(content: str, scope: str, path: Path, source_dir: str):
     documents = []
@@ -128,29 +98,36 @@ def create_documents_per_file(content: str, scope: str, path: Path, source_dir: 
     structured_data = response["structure"]
     page_title = response["title"]
     page_key = response["key"]
+    headings = {item['id']: item['content'] for item in structured_data["headings"]}
 
-    contents = merge_content_by_headings(structured_data["contents"])
-    headings = structured_data["headings"]
+    used_ids = {}
 
-    heading_counter = 0
-
-    for item in contents:
-        heading_id = item["heading"]
-        heading = ""
-        anchor = "/" + page_key
-
-        if heading_id is not None:
-            heading = headings[heading_counter]["content"]
+    for item in structured_data["contents"]:
+        if "heading" in item:
+            heading_id =item["heading"]
+            heading = headings[heading_id]
             anchor = "/" + page_key + "#" + heading_id
-            heading_counter += 1
+        else:
+            heading = ""
+            anchor = "/" + page_key
+
+        base_id = create_id(path, source_dir, anchor)
     
+        if base_id in used_ids:
+            used_ids[base_id] += 1
+            doc_id = create_id(path, source_dir, anchor, used_ids[base_id])
+        else:
+            used_ids[base_id] = 0
+            doc_id = base_id
+
         documents.append({
-            "id": create_id(path, source_dir, anchor),
+            "id": doc_id,
             "url": anchor,
-            "content": item["content"],
+            "rawContent": item["content"],
             "scope": scope,
             "heading": heading,
-            "pageTitle": page_title
+            "pageTitle": page_title,
+            "content": remove_html_elemets(item["content"])
         })
 
     return documents
