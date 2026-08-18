@@ -7,6 +7,12 @@ description: Access collections from browser/client environment.
 
 The generated outputs are optimized using async imports to optimize for browser environments.
 
+import {Chart} from './snowfall.js'
+export const year = 2023
+<Chart color="#fcb32c" year={year} />
+
+
+
 Only doc/docs collections are accessible on browser.
 
 ```tsx

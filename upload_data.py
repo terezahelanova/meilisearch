@@ -91,6 +91,13 @@ def update_index_settings():
             "searchableAttributes": ["heading", "content"]
         } 
     )
+    http_request(
+        "POST",
+        f"{MEILI_HOST}/indexes/{INDEX_NAME}/search",
+        {
+            "attributesToCrop": ["rawContent:10", "content:10"]
+        } 
+    )
 
 def create_documents_per_file(content: str, scope: str, path: Path, source_dir: str):
     documents = []
@@ -135,7 +142,7 @@ def create_documents_per_file(content: str, scope: str, path: Path, source_dir: 
 def build_docs(source_dir: str):
     final_documents = []
 
-    for path in source_dir.rglob("*.md"):
+    for path in source_dir.rglob("*.md*"):
         relativePath = path.relative_to(source_dir).as_posix()   
         folders = relativePath.split("/")
 
